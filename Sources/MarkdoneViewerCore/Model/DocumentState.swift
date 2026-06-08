@@ -9,7 +9,7 @@ public final class DocumentState {
 
     public var fileURL: URL?
     public var text: String
-    public var lastSavedText: String
+    public private(set) var lastSavedText: String
     public var mode: Mode
     public var previewFontSize: Double
 
