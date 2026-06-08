@@ -6,9 +6,8 @@ PRODUCT_NAME="MarkdoneViewer"
 BUNDLE_NAME="Markdone Viewer.app"
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 
-swift build -c "$CONFIGURATION"
-BIN_DIR="$(swift build -c "$CONFIGURATION" --show-bin-path)"
-EXECUTABLE_PATH="$BIN_DIR/$PRODUCT_NAME"
+swift build -c "$CONFIGURATION" --product "$PRODUCT_NAME"
+EXECUTABLE_PATH="$ROOT_DIR/.build/$CONFIGURATION/$PRODUCT_NAME"
 APP_DIR="$ROOT_DIR/build/$BUNDLE_NAME"
 
 rm -rf "$APP_DIR"
