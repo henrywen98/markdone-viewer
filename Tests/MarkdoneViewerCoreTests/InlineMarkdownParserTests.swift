@@ -29,6 +29,18 @@ struct InlineMarkdownParserTests {
         #expect(hasLink(result, URL(string: "https://example.com")!))
     }
 
+    @Test("inline runs expose styling traits for preview rendering")
+    func inlineRuns() {
+        let source = InlineMarkdownParser.parse("A **bold** *italic* `code` [site](https://example.com)")
+        let runs = InlineMarkdownRun.runs(in: source)
+
+        #expect(runs.map(\.text) == ["A ", "bold", " ", "italic", " ", "code", " ", "site"])
+        #expect(runs[1].traits == [.strong])
+        #expect(runs[3].traits == [.emphasis])
+        #expect(runs[5].traits == [.code])
+        #expect(runs[7].link == URL(string: "https://example.com")!)
+    }
+
     @Test("malformed inline syntax renders as literal text")
     func malformedSyntax() {
         let result = InlineMarkdownParser.parse("Broken **bold and [link](not a url")

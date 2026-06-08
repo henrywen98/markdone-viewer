@@ -1,3 +1,4 @@
+import AppKit
 import MarkdoneViewerCore
 import SwiftUI
 
@@ -44,6 +45,11 @@ struct MarkdoneViewerApp: App {
             }
 
             CommandMenu("Document") {
+                Button("Close Window") {
+                    NSApp.keyWindow?.performClose(nil)
+                }
+                .keyboardShortcut("w", modifiers: .command)
+
                 Button("Toggle Edit/Preview") {
                     state.toggleMode()
                 }
@@ -51,6 +57,12 @@ struct MarkdoneViewerApp: App {
             }
 
             CommandMenu("Preview") {
+                Button("Copy Rendered Text") {
+                    coordinator.copyRenderedTextToPasteboard()
+                }
+                .keyboardShortcut("c", modifiers: [.command, .shift])
+                .disabled(state.mode != .preview)
+
                 Button("Zoom In") {
                     state.increasePreviewFontSize()
                 }

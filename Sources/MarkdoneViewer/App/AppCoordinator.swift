@@ -100,6 +100,13 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
         confirmSaveIfNeeded() == .proceed
     }
 
+    func copyRenderedTextToPasteboard() {
+        let blocks = MarkdownParser.parse(state.text, markdownFileURL: state.fileURL)
+        let renderedText = MarkdownPlainTextRenderer.render(blocks)
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(renderedText, forType: .string)
+    }
+
     private func load(_ url: URL) {
         do {
             let text = try fileService.read(url: url)
