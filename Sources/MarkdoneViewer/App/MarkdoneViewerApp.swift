@@ -19,7 +19,7 @@ struct MarkdoneViewerApp: App {
                 .onAppear {
                     appDelegate.install(
                         openFileHandler: coordinator.openExternalFile(_:),
-                        shouldTerminateHandler: coordinator.confirmSaveIfNeeded
+                        shouldTerminateHandler: { coordinator.confirmSaveIfNeeded() == .proceed }
                     )
                 }
         }

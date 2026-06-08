@@ -5,13 +5,15 @@ import UniformTypeIdentifiers
 @MainActor
 final class AppCoordinator: NSObject, NSWindowDelegate {
     private let state: DocumentState
+    private let fileService: FileService
 
-    init(state: DocumentState) {
+    init(state: DocumentState, fileService: FileService = LocalFileService()) {
         self.state = state
+        self.fileService = fileService
     }
 
     func openFromPanel() {
-        guard confirmSaveIfNeeded() else {
+        guard confirmSaveIfNeeded() == .proceed else {
             return
         }
 
@@ -27,7 +29,7 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
     }
 
     func openExternalFile(_ url: URL) {
-        guard confirmSaveIfNeeded() else {
+        guard confirmSaveIfNeeded() == .proceed else {
             return
         }
 
@@ -41,7 +43,7 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
         }
 
         do {
-            try state.text.write(to: fileURL, atomically: true, encoding: .utf8)
+            try fileService.write(text: state.text, to: fileURL)
             state.markSaved()
             return true
         } catch {
@@ -62,7 +64,7 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
         }
 
         do {
-            try state.text.write(to: url, atomically: true, encoding: .utf8)
+            try fileService.write(text: state.text, to: url)
             state.markSaved(fileURL: url)
             return true
         } catch {
@@ -71,9 +73,9 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
         }
     }
 
-    func confirmSaveIfNeeded() -> Bool {
+    func confirmSaveIfNeeded() -> SaveConfirmationResult {
         guard state.isEdited else {
-            return true
+            return .proceed
         }
 
         let alert = NSAlert()
@@ -86,21 +88,21 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
 
         switch alert.runModal() {
         case .alertFirstButtonReturn:
-            return save()
+            return save() ? .proceed : .cancel
         case .alertSecondButtonReturn:
-            return true
+            return .proceed
         default:
-            return false
+            return .cancel
         }
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        confirmSaveIfNeeded()
+        confirmSaveIfNeeded() == .proceed
     }
 
     private func load(_ url: URL) {
         do {
-            let text = try String(contentsOf: url, encoding: .utf8)
+            let text = try fileService.read(url: url)
             state.load(text: text, from: url)
         } catch {
             showError(title: "Open Failed", message: error.localizedDescription)
