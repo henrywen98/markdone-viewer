@@ -7,9 +7,7 @@ struct PreviewModeView: View {
     let fileURL: URL?
     let fontSize: Double
 
-    private var blocks: [MarkdownBlock] {
-        MarkdownParser.parse(text, markdownFileURL: fileURL)
-    }
+    @State private var blocks: [MarkdownBlock] = []
 
     var body: some View {
         ScrollView {
@@ -28,6 +26,17 @@ struct PreviewModeView: View {
             NSWorkspace.shared.open(url)
             return .handled
         })
+        .task(id: parseKey) {
+            updateBlocks()
+        }
+    }
+
+    private var parseKey: ParseKey {
+        ParseKey(text: text, fileURL: fileURL)
+    }
+
+    private func updateBlocks() {
+        blocks = MarkdownParser.parse(text, markdownFileURL: fileURL)
     }
 
     @ViewBuilder
@@ -117,25 +126,54 @@ struct PreviewModeView: View {
     }
 }
 
+private struct ParseKey: Equatable {
+    let text: String
+    let fileURL: URL?
+}
+
 private struct LocalImageView: View {
     let alt: String
     let url: URL
 
+    @State private var image: NSImage?
+    @State private var loadFailed = false
+
     var body: some View {
-        if let image = NSImage(contentsOf: url) {
-            Image(nsImage: image)
-                .resizable()
-                .scaledToFit()
-                .frame(maxWidth: 820, alignment: .leading)
-                .accessibilityLabel(alt)
-        } else {
-            Text(alt.isEmpty ? url.lastPathComponent : alt)
-                .font(.system(.body, design: .monospaced))
-                .foregroundStyle(.secondary)
-                .padding(12)
-                .background(Color(nsColor: .tertiarySystemFill))
-                .clipShape(RoundedRectangle(cornerRadius: 6))
-                .textSelection(.enabled)
+        Group {
+            if let image {
+                Image(nsImage: image)
+                    .resizable()
+                    .scaledToFit()
+                    .frame(maxWidth: 820, alignment: .leading)
+                    .accessibilityLabel(alt)
+            } else if loadFailed {
+                Text(alt.isEmpty ? url.lastPathComponent : alt)
+                    .font(.system(.body, design: .monospaced))
+                    .foregroundStyle(.secondary)
+                    .padding(12)
+                    .background(Color(nsColor: .tertiarySystemFill))
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+                    .textSelection(.enabled)
+            } else {
+                ProgressView()
+                    .controlSize(.small)
+                    .frame(maxWidth: 820, alignment: .leading)
+            }
         }
+        .task(id: url) {
+            await loadImage()
+        }
+    }
+
+    private func loadImage() async {
+        image = nil
+        loadFailed = false
+
+        let imageData = await Task.detached(priority: .utility) {
+            try? Data(contentsOf: url)
+        }.value
+
+        image = imageData.flatMap(NSImage.init(data:))
+        loadFailed = image == nil
     }
 }
