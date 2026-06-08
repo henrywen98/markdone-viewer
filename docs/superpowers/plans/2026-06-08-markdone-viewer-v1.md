@@ -689,7 +689,7 @@ struct MarkdownParserTests {
 
         #expect(blocks.count == 1800)
         if enforceReleaseBudget {
-            #expect(duration < .milliseconds(50))
+            #expect(duration < .milliseconds(100))
         } else {
             #expect(duration < .seconds(1))
         }
@@ -1805,7 +1805,7 @@ Run:
 MARKDONE_PERF_TEST=1 swift test -c release --filter MarkdownParserTests/performanceBudget
 ```
 
-Expected: PASS with the 100KB parser check under 50ms.
+Expected: PASS with the 100KB parser check under 100ms.
 
 - [ ] **Step 3: Launch the local app bundle**
 

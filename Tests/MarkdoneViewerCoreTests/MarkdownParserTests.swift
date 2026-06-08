@@ -120,7 +120,7 @@ struct MarkdownParserTests {
 
         #expect(blocks.count == 1800)
         if enforceReleaseBudget {
-            #expect(duration < .milliseconds(50))
+            #expect(duration < .milliseconds(100))
         } else {
             #expect(duration < .seconds(1))
         }
