@@ -1,7 +1,7 @@
 # markdone viewer — Design Spec
 
 **Date**: 2026-06-08
-**Status**: Refined Draft
+**Status**: Final
 **Author**: Henry
 
 ---
