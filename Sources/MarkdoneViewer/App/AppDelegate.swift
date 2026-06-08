@@ -20,7 +20,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func application(_ application: NSApplication, open urls: [URL]) {
         guard let openFileHandler else {
-            pendingOpenURLs.append(contentsOf: urls.prefix(1))
+            // Single-document app: keep only the first URL the OS hands us
+            // so that any pre-install open events resolve to a single file.
+            if let first = urls.first, pendingOpenURLs.isEmpty {
+                pendingOpenURLs = [first]
+            }
             return
         }
 

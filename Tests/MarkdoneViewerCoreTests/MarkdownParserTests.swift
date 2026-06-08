@@ -116,6 +116,10 @@ struct MarkdownParserTests {
         let start = ContinuousClock.now
         let blocks = MarkdownParser.parse(source)
         let duration = start.duration(to: .now)
+        // MARKDONE_PERF_TEST=1 enforces the tight v1 release budget. Run with
+        // `MARKDONE_PERF_TEST=1 swift test -c release --filter .../performanceBudget`
+        // so the gate is meaningful; debug builds are ~2x slower and are not
+        // expected to fit the 100ms budget.
         let enforceReleaseBudget = ProcessInfo.processInfo.environment["MARKDONE_PERF_TEST"] == "1"
 
         #expect(blocks.count == 1800)
