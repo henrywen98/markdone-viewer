@@ -20,14 +20,13 @@ struct ContentView: View {
         }
         .frame(minWidth: 820, minHeight: 620)
         .toolbar {
-            ToolbarItem(placement: .principal) {
-                Picker("Mode", selection: $state.mode) {
-                    ForEach(Mode.allCases) { mode in
-                        Text(mode.title).tag(mode)
-                    }
+            ToolbarItem(placement: .primaryAction) {
+                Button {
+                    state.toggleMode()
+                } label: {
+                    Label(modeToggleTitle, systemImage: modeToggleSystemImage)
                 }
-                .pickerStyle(.segmented)
-                .frame(width: 180)
+                .help("Switch to \(modeToggleTitle)")
             }
         }
         .background(
@@ -37,5 +36,13 @@ struct ContentView: View {
                 coordinator: coordinator
             )
         )
+    }
+
+    private var modeToggleTitle: String {
+        state.mode == .preview ? "Edit" : "Preview"
+    }
+
+    private var modeToggleSystemImage: String {
+        state.mode == .preview ? "pencil" : "doc.text"
     }
 }
