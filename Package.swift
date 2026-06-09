@@ -30,6 +30,11 @@ let package = Package(
             name: "MarkdoneViewerCoreTests",
             dependencies: ["MarkdoneViewerCore"],
             path: "Tests/MarkdoneViewerCoreTests"
+        ),
+        .testTarget(
+            name: "MarkdoneViewerTests",
+            dependencies: ["MarkdoneViewer", "MarkdoneViewerCore"],
+            path: "Tests/MarkdoneViewerTests"
         )
     ]
 )
