@@ -125,18 +125,15 @@ enum MarkdownRichTextRenderer {
                 )
             )
             if run.traits.contains(.emphasis) {
-                attributed.addAttribute(
-                    .obliqueness,
-                    value: 0.2,
-                    range: NSRange(location: 0, length: attributed.length)
-                )
+                attributed.addAttribute(.obliqueness, value: 0.2, range: attributed.wholeRange)
             }
             if let link = run.link {
-                attributed.addAttribute(.link, value: link, range: NSRange(location: 0, length: attributed.length))
-                attributed.addAttribute(
-                    .underlineStyle,
-                    value: NSUnderlineStyle.single.rawValue,
-                    range: NSRange(location: 0, length: attributed.length)
+                attributed.addAttributes(
+                    [
+                        .link: link,
+                        .underlineStyle: NSUnderlineStyle.single.rawValue
+                    ],
+                    range: attributed.wholeRange
                 )
             }
             result.append(attributed)
@@ -205,4 +202,8 @@ enum MarkdownRichTextRenderer {
             .foregroundColor: color
         ]
     }
+}
+
+private extension NSMutableAttributedString {
+    var wholeRange: NSRange { NSRange(location: 0, length: length) }
 }
