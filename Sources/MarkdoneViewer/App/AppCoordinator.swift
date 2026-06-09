@@ -4,12 +4,32 @@ import UniformTypeIdentifiers
 
 @MainActor
 final class AppCoordinator: NSObject, NSWindowDelegate {
+    typealias ErrorHandler = @MainActor (_ title: String, _ message: String) -> Void
+    typealias SaveConfirmationRunner = @MainActor (_ title: String) -> SaveChoice
+    typealias OpenPanelRunner = @MainActor () -> URL?
+    typealias SavePanelRunner = @MainActor (_ defaultName: String) -> URL?
+
     private let state: DocumentState
     private let fileService: FileService
+    private let errorHandler: ErrorHandler
+    private let saveConfirmation: SaveConfirmationRunner
+    private let openPanel: OpenPanelRunner
+    private let savePanel: SavePanelRunner
 
-    init(state: DocumentState, fileService: FileService = LocalFileService()) {
+    init(
+        state: DocumentState,
+        fileService: FileService = LocalFileService(),
+        errorHandler: @escaping ErrorHandler = AppCoordinator.presentError,
+        saveConfirmation: @escaping SaveConfirmationRunner = AppCoordinator.runSaveConfirmation,
+        openPanel: @escaping OpenPanelRunner = AppCoordinator.runOpenPanel,
+        savePanel: @escaping SavePanelRunner = AppCoordinator.runSavePanel
+    ) {
         self.state = state
         self.fileService = fileService
+        self.errorHandler = errorHandler
+        self.saveConfirmation = saveConfirmation
+        self.openPanel = openPanel
+        self.savePanel = savePanel
     }
 
     func openFromPanel() {
@@ -17,15 +37,11 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
             return
         }
 
-        let panel = NSOpenPanel()
-        panel.allowsMultipleSelection = false
-        panel.canChooseDirectories = false
-        panel.canChooseFiles = true
-        panel.allowedContentTypes = markdownContentTypes
-
-        if panel.runModal() == .OK, let url = panel.url {
-            load(url)
+        guard let url = openPanel() else {
+            return
         }
+
+        load(url)
     }
 
     func openExternalFile(_ url: URL) {
@@ -47,19 +63,15 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
             state.markSaved()
             return true
         } catch {
-            showError(title: "Save Failed", message: error.localizedDescription)
+            errorHandler("Save Failed", error.localizedDescription)
             return false
         }
     }
 
     @discardableResult
     func saveAs() -> Bool {
-        let panel = NSSavePanel()
-        panel.allowedContentTypes = markdownContentTypes
-        panel.canCreateDirectories = true
-        panel.nameFieldStringValue = state.fileURL?.lastPathComponent ?? "Untitled.md"
-
-        guard panel.runModal() == .OK, let url = panel.url else {
+        let defaultName = state.fileURL?.lastPathComponent ?? "Untitled.md"
+        guard let url = savePanel(defaultName) else {
             return false
         }
 
@@ -68,7 +80,7 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
             state.markSaved(fileURL: url)
             return true
         } catch {
-            showError(title: "Save Failed", message: error.localizedDescription)
+            errorHandler("Save Failed", error.localizedDescription)
             return false
         }
     }
@@ -78,21 +90,13 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
             return .proceed
         }
 
-        let alert = NSAlert()
-        alert.messageText = "Do you want to save changes to \(state.displayTitle)?"
-        alert.informativeText = "Your changes will be lost if you do not save them."
-        alert.alertStyle = .warning
-        alert.addButton(withTitle: "Save")
-        alert.addButton(withTitle: "Discard")
-        alert.addButton(withTitle: "Cancel")
-
-        switch alert.runModal() {
-        case .alertFirstButtonReturn:
-            return save() ? .proceed : .cancel
-        case .alertSecondButtonReturn:
+        switch saveConfirmation(state.displayTitle) {
+        case .discard:
             return .proceed
-        default:
+        case .cancel:
             return .cancel
+        case .save:
+            return save() ? .proceed : .cancel
         }
     }
 
@@ -112,11 +116,13 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
             let text = try fileService.read(url: url)
             state.load(text: text, from: url)
         } catch {
-            showError(title: "Open Failed", message: error.localizedDescription)
+            errorHandler("Open Failed", error.localizedDescription)
         }
     }
 
-    private func showError(title: String, message: String) {
+    // MARK: - Default UI handlers
+
+    private static func presentError(title: String, message: String) {
         let alert = NSAlert()
         alert.messageText = title
         alert.informativeText = message
@@ -124,7 +130,42 @@ final class AppCoordinator: NSObject, NSWindowDelegate {
         alert.runModal()
     }
 
-    private var markdownContentTypes: [UTType] {
+    private static func runSaveConfirmation(title: String) -> SaveChoice {
+        let alert = NSAlert()
+        alert.messageText = "Do you want to save changes to \(title)?"
+        alert.informativeText = "Your changes will be lost if you do not save them."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Save")
+        alert.addButton(withTitle: "Discard")
+        alert.addButton(withTitle: "Cancel")
+
+        switch alert.runModal() {
+        case .alertFirstButtonReturn: return .save
+        case .alertSecondButtonReturn: return .discard
+        default: return .cancel
+        }
+    }
+
+    private static func runOpenPanel() -> URL? {
+        let panel = NSOpenPanel()
+        panel.allowsMultipleSelection = false
+        panel.canChooseDirectories = false
+        panel.canChooseFiles = true
+        panel.allowedContentTypes = markdownContentTypes
+        guard panel.runModal() == .OK else { return nil }
+        return panel.url
+    }
+
+    private static func runSavePanel(defaultName: String) -> URL? {
+        let panel = NSSavePanel()
+        panel.allowedContentTypes = markdownContentTypes
+        panel.canCreateDirectories = true
+        panel.nameFieldStringValue = defaultName
+        guard panel.runModal() == .OK else { return nil }
+        return panel.url
+    }
+
+    private static var markdownContentTypes: [UTType] {
         ["md", "markdown", "mdwn", "mdown"].compactMap {
             UTType(filenameExtension: $0)
         }
